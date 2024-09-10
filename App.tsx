@@ -11,7 +11,7 @@ const App = () => {
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <MenuProvider>
-          <StatusBar backgroundColor={'blue'} />
+          <StatusBar backgroundColor={'red'} />
           <SafeAreaView style={{backgroundColor: 'red', flex: 1}}>
             <AppNavigator />
           </SafeAreaView>

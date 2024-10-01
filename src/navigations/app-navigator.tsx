@@ -9,10 +9,14 @@ import {
   ContactScreen,
   ForgetPassword,
   HomeScreen,
+  InboxScreen,
   LoginScreen,
+  PatientScreen,
   ProfileScreen,
   Signup,
 } from '../screens';
+import MyTabs from './bottom-tab';
+import StaticTabbar from './static';
 
 const Stack = createNativeStackNavigator();
 
@@ -30,8 +34,13 @@ function AppNavigator() {
         initialRouteName="Login"
         screenOptions={{headerShown: false}}>
         {isAuth ? (
-          <Stack.Screen name="BottomTab" component={HomeScreen} />
+          <>
+            <Stack.Screen name="BottomTab" component={HomeScreen} />
+          </>
         ) : (
+          // <Stack.Screen name="Inbox" component={InboxScreen} />
+          // <Stack.Screen name="Profi" component={ProfileScreen} />
+          // <Stack.Screen name="Inbox" component={PatientScreen} />
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={Signup} />
@@ -41,6 +50,8 @@ function AppNavigator() {
         <Stack.Screen name="Chat" component={Chatscreen} />
         <Stack.Screen name="Contacts" component={ContactScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Inbox" component={InboxScreen} />
+        <Stack.Screen name="Patient" component={PatientScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

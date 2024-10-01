@@ -44,11 +44,6 @@ const ContactScreen = memo(({navigation}: IProps) => {
   };
 
   const fetchUsers = () => {
-    console.log(
-      'visibledata[visibledata?.length - 1]?.id ',
-      visibledata[visibledata?.length - 1]?.id,
-    );
-
     Query()
       .once('value')
       .then(snapshot => {
@@ -67,7 +62,6 @@ const ContactScreen = memo(({navigation}: IProps) => {
         const currentUser = paginationData.find(
           user => user.id === currentUserUid,
         );
-        console.log('currentUser>>>>>>>>>>>>>>>>>>>>>', currentUser?.image);
         if (currentUser) {
           setCurrentUserImage(currentUser?.image);
         }
@@ -181,12 +175,34 @@ const ContactScreen = memo(({navigation}: IProps) => {
         key={item?.id}
         style={styles.mainView}
         onPress={() => {
-          navigate('Chat', {
-            chatName: item.name,
-            imageIcon: item.image,
-            currentUserUId: currentUserUid,
-            recipientUid: item.id,
-          });
+          console.log();
+          database()
+            .ref('users')
+            .child(currentUserUid ?? '')
+            .child('connections')
+            .child(`${currentUserUid}_${item.id}`)
+            .child('chatVisible')
+            .once('value')
+            .then(snap => {
+              if (snap.exists()) {
+                navigate('Chat', {
+                  chatName: item.name,
+                  imageIcon: item.image,
+                  currentUserUId: currentUserUid,
+                  recipientUid: item.id,
+                  fromContact: true,
+                  chatVisible: snap.val(),
+                });
+              } else {
+                navigate('Chat', {
+                  chatName: item.name,
+                  imageIcon: item.image,
+                  currentUserUId: currentUserUid,
+                  recipientUid: item.id,
+                  fromContact: true,
+                });
+              }
+            });
         }}>
         <Image
           source={

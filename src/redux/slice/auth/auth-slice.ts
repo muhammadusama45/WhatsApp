@@ -12,6 +12,7 @@ const initialState: AuthState = {
   error: '',
   name: '',
   surname: '',
+  gender: '',
 };
 
 export const authSlice = createSlice({
@@ -78,6 +79,7 @@ export const authSlice = createSlice({
       state.uid = action.payload?.user?.uid;
       state.email = action.payload?.user?.email ?? '';
       state.name = `${action.meta.arg.name} ${action.meta.arg.surname}`;
+      state.gender = action.meta.arg.gender;
     });
     ////Forget Password///
     builder.addCase(forgetPassword.pending, state => {

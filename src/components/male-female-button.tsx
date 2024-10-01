@@ -6,26 +6,32 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-interface IProps {}
-const MaleFemale = memo(({}: IProps) => {
-  const [selectgender, setselectgender] = useState(true);
+
+interface IProps {
+  selectedGender: string;
+  onGenderSelect: (gender: string) => void;
+}
+const MaleFemale = memo(({selectedGender, onGenderSelect}: IProps) => {
+  // const [selectgender, setselectgender] = useState(true);
   return (
     <View style={{margin: 10, flexDirection: 'row'}}>
-      <TouchableOpacity onPress={() => setselectgender(false)}>
-     
+      <TouchableOpacity onPress={() => onGenderSelect('Female')}>
         <View style={{flexDirection: 'row', alignItems: 'center'}}>
           <View style={styles1.btn}>
-            {selectgender == false ? <View style={styles1.bgbtn}></View> : null}
+            {selectedGender == 'Female' ? (
+              <View style={styles1.bgbtn}></View>
+            ) : null}
           </View>
           <Text style={styles1.text}>Female</Text>
         </View>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => setselectgender(true)}>
+      <TouchableOpacity onPress={() => onGenderSelect('Male')}>
         <View
           style={{flexDirection: 'row', alignItems: 'center', marginLeft: 10}}>
-       
           <View style={styles1.btn}>
-            {selectgender == true ? <View style={styles1.bgbtn}></View> : null}
+            {selectedGender == 'Male' ? (
+              <View style={styles1.bgbtn}></View>
+            ) : null}
           </View>
           <Text style={styles1.text}>Male</Text>
         </View>

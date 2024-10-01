@@ -9,6 +9,7 @@ export type SignupPayload = {
   email: string;
   confirmEmail: string;
   password: string;
+  gender: string;
 };
 
 export type forgetPayload = {

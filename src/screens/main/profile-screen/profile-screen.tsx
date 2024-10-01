@@ -7,6 +7,7 @@ import {
   Button,
   TextInput,
   StyleSheet,
+  SafeAreaView,
 } from 'react-native';
 
 import {styles} from './styles';
@@ -31,8 +32,8 @@ import {updateName} from '../../../redux/slice/auth/auth-slice';
 import {goBack, navigate} from '../../../../root-navigation';
 
 interface IProps {
-  navigation: any;
-  route: any;
+  navigation?: any;
+  route?: any;
 }
 
 const ProfileScreen = memo(({navigation, route}: IProps) => {

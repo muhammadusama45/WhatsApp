@@ -3,6 +3,7 @@ import {AuthState, ChatState} from '../../states';
 
 const initialState: ChatState = {
   allMessages: [],
+
   loading: false,
   error: '',
 };

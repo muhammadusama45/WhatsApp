@@ -47,4 +47,71 @@ export const styles = StyleSheet.create({
   view4: {
     width: 30,
   },
+
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+    zIndex: 500,
+  },
+  listContainer: {
+    zIndex: 500,
+    padding: 10,
+  },
+  mainView: {
+    zIndex: 500,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
+    backgroundColor: 'white',
+    marginBottom: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 15,
+    borderRadius: 10,
+    shadowColor: 'black',
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 10,
+    shadowRadius: 5.5,
+    shadowOpacity: 0.32,
+  },
+  row: {
+    zIndex: 500,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  nameText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  timeText: {
+    fontSize: 14,
+    color: 'grey',
+  },
+  messageText: {
+    fontSize: 16,
+    color: 'black',
+
+    flex: 1,
+  },
+  loadingText: {
+    fontSize: 20,
+    textAlign: 'center',
+  },
+  fab: {
+    backgroundColor: 'blue',
+    height: 60,
+    width: 60,
+    borderRadius: 30,
+    position: 'absolute',
+    bottom: 90,
+    right: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

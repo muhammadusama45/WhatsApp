@@ -6,9 +6,12 @@ export type AuthState = {
   email: string;
   loading: boolean;
   error: string;
+  gender: string;
 };
 
 export type InboxState = {
+  unreadCount: any;
+  totalUnreadCount: any;
   messages: [];
   loading: boolean;
   error: string;

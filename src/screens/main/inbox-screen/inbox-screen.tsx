@@ -1,29 +1,22 @@
+import database, {FirebaseDatabaseTypes} from '@react-native-firebase/database';
+import _ from 'lodash';
+import moment from 'moment';
 import React, {memo, useEffect, useState} from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  Image,
-} from 'react-native';
-import Topbar from '../../../components/topbar/topbar';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import {FlatList, Image, Text, TouchableOpacity, View} from 'react-native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import {useDispatch, useSelector} from 'react-redux';
-import database, {FirebaseDatabaseTypes} from '@react-native-firebase/database';
 import {navigate} from '../../../../root-navigation';
-import _ from 'lodash';
-import {RootState} from '../../../redux/store';
+import Topbar from '../../../components/topbar/topbar';
+import {clearChat} from '../../../redux/slice/auth/chat-slice';
 import {
   clearInbox,
+  setRemovedChat,
   setSingleChat,
   setSingleChatForNameandImage,
   setVisibleData,
 } from '../../../redux/slice/auth/inbox-slice';
-import moment from 'moment';
-import {clearChat} from '../../../redux/slice/auth/chat-slice';
-import {Icon} from 'react-native-paper';
+import {RootState} from '../../../redux/store';
+import {styles} from './styles';
 
 interface ChatMessage {
   name: string;
@@ -57,6 +50,7 @@ interface ChatItem {
   secondUser: string;
   image: any;
   chatVisible: number;
+  unreadCount: number;
 }
 
 interface User {
@@ -65,17 +59,17 @@ interface User {
 }
 
 interface IProps {
-  navigation: any;
+  navigation?: any;
 }
 
 const InboxScreen = memo(({}: IProps) => {
-  // const [visibleData, setVisibleData] = useState<ChatItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const {uid, name} = useSelector((state: RootState) => state.auth);
   const {visibleData} = useSelector((state: RootState) => state.inbox);
+  const [longPressedItemId, setLongPressedItemId] = useState<ChatItem>();
   const currentUserUid = uid;
   const dispatch = useDispatch();
 
@@ -89,10 +83,10 @@ const InboxScreen = memo(({}: IProps) => {
     .child('connections')
     .orderByChild('chatName');
 
-  // const imageRef = database()
-  //   .ref(`user/${uid}`)
-  //   .child('connections')
-  //   .orderByChild('image');
+  const inboxRemoveRef = database()
+    .ref(`users/${uid}`)
+    .child('connections')
+    .orderByChild('isRemove');
 
   useEffect(() => {
     dispatch(clearInbox());
@@ -108,15 +102,15 @@ const InboxScreen = memo(({}: IProps) => {
   ): Array<ChatItem> => {
     const chatList: Array<ChatItem> = [];
     snapshot?.forEach(childSnapshot => {
-      chatList.unshift(inboxObject(childSnapshot));
-      return undefined;
+      if (childSnapshot.child('isRemove').val() == false) {
+        chatList.unshift(inboxObject(childSnapshot));
+        return undefined;
+      }
     });
     return chatList;
   };
 
   const inboxObject = (childSnapshot: FirebaseDatabaseTypes.DataSnapshot) => {
-    //console.log(childSnapshot, 'jsjnfjdsff');
-
     return {
       id: childSnapshot.key ?? '',
       name: childSnapshot.child('chatName').val(),
@@ -127,6 +121,7 @@ const InboxScreen = memo(({}: IProps) => {
       secondUser: childSnapshot.child('secondUser').val(),
       image: childSnapshot.child('image').val(),
       chatVisible: childSnapshot.child('chatVisible').val(),
+      unreadCount: childSnapshot.child('unreadCount').val(),
     };
   };
 
@@ -145,28 +140,28 @@ const InboxScreen = memo(({}: IProps) => {
     } finally {
       setLoading(false);
     }
-    inboxRef.limitToLast(1).on('child_added', snapshot => {
-      if (snapshot?.exists()) {
+    inboxRef.limitToLast(1).on('child_added', async snapshot => {
+      if (snapshot?.exists() && snapshot.child('isRemove').val() == false) {
         dispatch(setSingleChat(inboxObject(snapshot)));
       }
     });
-    inboxRef.limitToLast(1).on('child_changed', snapshot => {
-      if (snapshot?.exists()) {
+    inboxRef.on('child_changed', async snapshot => {
+      if (snapshot?.exists() && snapshot.child('isRemove').val() == false) {
+        const newChat = inboxObject(snapshot);
         dispatch(setSingleChat(inboxObject(snapshot)));
       }
     });
+
     inboxNameRef.on('child_changed', snapshot => {
-      if (snapshot?.exists()) {
+      if (snapshot?.exists() && snapshot.child('isRemove').val() == false) {
         dispatch(setSingleChatForNameandImage(inboxObject(snapshot)));
       }
     });
-    //   imageRef.on('child_changed', snapshot =>
-    //     {
-    //     if (snapshot?.exists()) {
-    //       dispatch(setSingleChatForName(inboxObject(snapshot)));
-    //     }
-    //   }
-    // );
+    inboxRemoveRef.on('child_changed', snapshot => {
+      if (snapshot?.exists() && snapshot.child('isRemove').val() == true) {
+        dispatch(setRemovedChat(inboxObject(snapshot)));
+      }
+    });
   };
 
   const loadMoreChats = () => {
@@ -176,15 +171,8 @@ const InboxScreen = memo(({}: IProps) => {
     }
   };
 
-  //const key = database().ref(`chats/${ch}`).child('connections')
-  const [longPressedItemId, setLongPressedItemId] = useState<ChatItem>();
-
   const renderItem = ({item}: {item: ChatItem}) => {
     const recipientUid = item.secondUser;
-    // const userRef1 = `${uid}_${recipientUid}`;
-    // const userRef2 = `${recipientUid}_${uid}`;
-    // const chatRoomRef1 = database().ref(`chats/${userRef1}/`);
-    // const chatRoomRef2 = database().ref(`chats/${userRef2}/`);
 
     const onLong = () => {
       console.log(item);
@@ -208,7 +196,6 @@ const InboxScreen = memo(({}: IProps) => {
             recipientUid: recipientUid,
             chatId: item.id,
             chatVisible: item.chatVisible,
-            // messages: item.message,
           });
         }}>
         <View style={{width: 48, height: 48, borderRadius: 24, zIndex: 500}}>
@@ -225,29 +212,75 @@ const InboxScreen = memo(({}: IProps) => {
         <View style={{flex: 1, zIndex: 500}}>
           <View style={styles.row}>
             <Text style={styles.nameText}>{item.name}</Text>
-            <Text style={styles.timeText}>{item.lastTime}</Text>
+            {item.lastTime != 'Invalid date' && item.lastMsg != '' && (
+              <Text style={styles.timeText}>{item.lastTime}</Text>
+            )}
           </View>
 
           <View style={styles.row}>
             <Text style={styles.messageText} numberOfLines={1}>
               {item.lastMsg}
             </Text>
-            <MaterialIcons
-              name="keyboard-arrow-right"
-              color={'black'}
-              size={25}
-            />
+
+            {item?.unreadCount > 0 && (
+              <View
+                style={{
+                  paddingHorizontal: 7,
+                  paddingVertical: 3,
+                  backgroundColor: 'red',
+                  borderRadius: 100,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                }}>
+                <Text
+                  style={{
+                    color: 'white',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                  }}>
+                  {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>
     );
   };
 
-  const deleteChat = (chat: ChatItem) => {
-    database()
-      .ref(`users/${uid}/connections`)
-      .child(`${uid}_${chat.secondUser}`)
-      .update({chatVisible: database.ServerValue.TIMESTAMP});
+  const clearMessages = async (chat: ChatItem) => {
+    try {
+      await database()
+        .ref(`users/${uid}/connections`)
+        .child(`${uid}_${chat.secondUser}`)
+        .update({
+          chatVisible: database.ServerValue.TIMESTAMP,
+          lastmsg: '',
+          unreadCount: 0,
+        });
+      console.log('Message Cleared');
+      setLongPressedItemId(undefined);
+    } catch (error) {
+      console.error('Error clearing messages:', error);
+      throw error;
+    }
+  };
+
+  const deleteChat = async (chat: ChatItem) => {
+    try {
+      await clearMessages(chat);
+      setTimeout(() => {
+        database()
+          .ref(`users/${uid}/connections`)
+          .child(`${uid}_${chat.secondUser}`)
+          .update({isRemove: true});
+      }, 1000);
+      setLongPressedItemId(undefined);
+    } catch (error) {
+      console.error('Error deleting Message', error);
+      throw error;
+    }
   };
 
   const closeLongPress = () => {
@@ -289,7 +322,7 @@ const InboxScreen = memo(({}: IProps) => {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
-              deleteChat(longPressedItemId);
+              clearMessages(longPressedItemId);
             }}
             style={{
               backgroundColor: 'blue',
@@ -301,7 +334,7 @@ const InboxScreen = memo(({}: IProps) => {
             <Text style={{color: 'white', fontSize: 18}}>Clear Messages</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            //onPress={handleSaveName}
+            onPress={() => deleteChat(longPressedItemId)}
             style={{
               backgroundColor: 'blue',
               padding: 10,
@@ -318,12 +351,8 @@ const InboxScreen = memo(({}: IProps) => {
         data={visibleData}
         renderItem={renderItem}
         keyExtractor={item => item.id ?? ''}
-        onEndReached={loadMoreChats} // Trigger load more on end reached
-        onEndReachedThreshold={0.5} // Adjust the threshold as needed
-
-        // ListFooterComponent={() =>
-        //   loading ? <Text style={styles.loadingText}>Loading.....</Text> : null
-        // }
+        onEndReached={loadMoreChats}
+        onEndReachedThreshold={0.5}
       />
 
       <TouchableOpacity
@@ -338,72 +367,3 @@ const InboxScreen = memo(({}: IProps) => {
 });
 
 export default InboxScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-    zIndex: 500,
-  },
-  listContainer: {
-    zIndex: 500,
-    padding: 10,
-  },
-  mainView: {
-    zIndex: 500,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 5,
-    backgroundColor: 'white',
-    marginBottom: 10,
-    paddingHorizontal: 5,
-    paddingVertical: 15,
-    borderRadius: 10,
-    shadowColor: 'black',
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    elevation: 10,
-    shadowRadius: 5.5,
-    shadowOpacity: 0.32,
-  },
-  row: {
-    zIndex: 500,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  nameText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  timeText: {
-    fontSize: 14,
-    color: 'grey',
-  },
-  messageText: {
-    fontSize: 16,
-    color: 'black',
-
-    flex: 1,
-  },
-  loadingText: {
-    fontSize: 20,
-    textAlign: 'center',
-  },
-  fab: {
-    backgroundColor: 'blue',
-    height: 60,
-    width: 60,
-    borderRadius: 30,
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

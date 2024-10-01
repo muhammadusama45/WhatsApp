@@ -20,6 +20,7 @@ const SignupScreen = memo(({navigation}: ISignupProps) => {
   const dispatch = useDispatch<AppDispatch>();
 
   const [name, setname] = useState('');
+  const [gender, setGender] = useState<string>('');
   const [surname, setsurname] = useState('');
   const [email, setemail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState<string>('');
@@ -41,8 +42,10 @@ const SignupScreen = memo(({navigation}: ISignupProps) => {
       Alert.alert('Error', 'Email addresses do not match.');
     } else if (password === '') {
       Alert.alert('password field is empty');
+    } else if (gender === '') {
+      Alert.alert('gender not selected');
     } else {
-      dispatch(SignUp({name, surname, email, confirmEmail, password}));
+      dispatch(SignUp({name, surname, email, confirmEmail, password, gender}));
       console.log(name, surname, email);
     }
   };
@@ -95,7 +98,7 @@ const SignupScreen = memo(({navigation}: ISignupProps) => {
             />
 
             <View>
-              <MaleFemale />
+              <MaleFemale selectedGender={gender} onGenderSelect={setGender} />
             </View>
             <View style={{flexDirection: 'row', marginHorizontal: 10}}>
               <Text style={{color: '#808080'}}>

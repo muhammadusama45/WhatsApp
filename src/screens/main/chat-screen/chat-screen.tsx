@@ -14,6 +14,7 @@ import {
   TextInput,
   FlatList,
 } from 'react-native';
+import {Formik} from 'formik';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
@@ -48,6 +49,8 @@ interface chatRoom {
   secondUser: string;
   image: any;
   chatVisible?: number;
+  isRemove: boolean;
+  unreadCount?: number;
   // senderImage: any;
   // receiverImage: any;
 }
@@ -62,9 +65,16 @@ interface IProps {
 //memo prevents from re renderinng except which props have changed
 
 const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
-  const {chatName, imageIcon, recipientUid, currentUserUId, chatVisible} =
-    route.params;
-  const [myMessage, setMyMessage] = useState<string>('');
+  const {
+    chatName,
+    imageIcon,
+    recipientUid,
+    currentUserUId,
+    chatVisible,
+    fromContact,
+    chatId,
+  } = route.params;
+  const [isMessageSent, setIsMessageSent] = useState<boolean>(true);
   const [displayText, setDisplayText] = useState<IMessage[]>([]);
   const {name} = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
@@ -119,22 +129,32 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     return chatList;
   };
 
-  //console.log('displayText ===> ', displayText);
+  const readCount = () => {
+    database()
+      .ref('users')
+      .child(currentUserUId)
+      .child('connections')
+      .child(chatId)
+      .child('unreadCount')
+      .set(0);
+  };
 
   useEffect(() => {
     const messagesRef = database().ref(`chats/${userRef1}`);
     const messagesRef2 = database().ref(`chats/${userRef2}`);
-
+    if (!fromContact) {
+      readCount();
+    }
     messagesRef
-      .orderByChild('chatVisible')
-      .startAt(chatVisible)
+      .orderByChild('timeStamp')
+      .startAt(chatVisible ?? null)
       .once('value', snapshot => {
         if (snapshot?.exists()) {
           handleNewMessages(chatMapper(snapshot));
         } else {
           messagesRef2
-            .orderByChild('chatVisible')
-            .startAt(chatVisible)
+            .orderByChild('timeStamp')
+            .startAt(chatVisible ?? null)
             .once('value', snapshot => {
               if (snapshot?.exists()) {
                 handleNewMessages(chatMapper(snapshot));
@@ -143,6 +163,7 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
         }
         messagesRef
           ?.orderByChild('timeStamp')
+          .startAt(chatVisible ?? null)
           .limitToLast(1)
           .on('child_added', snap => {
             if (snap?.exists()) {
@@ -157,6 +178,7 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
 
         messagesRef2
           ?.orderByChild('timeStamp')
+          .startAt(chatVisible ?? null)
           .limitToLast(1)
           .on('child_added', snap => {
             if (snap?.exists()) {
@@ -170,13 +192,16 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
           });
       });
     return () => {
+      if (!fromContact) {
+        readCount();
+      }
       dispatch(clearChat([]));
       messagesRef.off();
       messagesRef2?.off();
     };
   }, []);
 
-  const handleSend = async () => {
+  const handleSend = async (myMessage: string) => {
     //trim() removes white spaces from the beginnig and endinng of the string thus prevents from sending blank messages
     //=== strict equality operator used to compare two values it will return true if both have same value and have same type otherwise it will false
     if (myMessage.trim() === '') return;
@@ -189,12 +214,12 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
 
     const senderImage = senderSnapshot.val()?.profileImageUrl || '';
     const receiverImage = receiverSnapshot.val()?.profileImageUrl || '';
-    const messageRef1 = database().ref(
-      `users/${currentUserUId}/connections/${userRef1}`,
-    );
-    const messageRef2 = database().ref(
-      `users/${recipientUid}/connections/${userRef2}`,
-    );
+    const messageRef1 = database()
+      .ref(`users/${currentUserUId}/connections`)
+      .child(userRef1);
+    const messageRef2 = database()
+      .ref(`users/${recipientUid}/connections`)
+      .child(userRef2);
 
     //Purpose: This line creates a new message object that will be added to the list of messages.
     //id: Date.now().toString(): Generates a unique identifier for the message using the used for creating unnique ids an than converted into sting
@@ -204,7 +229,6 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     const newMessage: any = {
       id: uuid.v4().toString(),
       chatId: currentUserUId ? chatRef.key : recipientUid ? chatRef2.key : null,
-
       timeStamp: firebase?.database?.ServerValue?.TIMESTAMP,
       text: myMessage,
       senderUid: currentUserUId,
@@ -217,17 +241,16 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
       chatName: chatName,
       secondUser: recipientUid,
       image: receiverImage,
-      // chatVisible: chatVisible,
+      isRemove: false,
     };
-    if (chatVisible) {
-      chatRoomSender.chatVisible = chatVisible;
-    }
     const chatRoomReceiver: chatRoom = {
       lastmsgtime: firebase?.database?.ServerValue?.TIMESTAMP,
       lastmsg: myMessage,
       chatName: name,
       secondUser: currentUserUId,
       image: senderImage,
+      isRemove: false,
+      unreadCount: 1,
     };
 
     AddNewMessages({
@@ -236,29 +259,59 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
       status: 'false',
     });
 
-    messageRef1.set(chatRoomSender).then(() => {
-      messageRef2.set(chatRoomReceiver).then(res => {
-        chatRoomRef1?.once('value')?.then(async snapshot => {
-          let messagekey1: any;
-          let messagekey2: any;
-
-          if (snapshot?.exists()) {
-            messagekey1 = chatRoomRef1?.push();
-            const message1 = messagekey1.set(newMessage).then(() => {
-              // messagekey1.child('status').update({status: setStatus('sent')});
-            });
-            console.log(messagekey1, 'key1');
+    messageRef1.once('value').then(snap => {
+      if (snap.exists()) {
+        messageRef1.child('lastmsg').set(myMessage);
+        // if (fromContact) {
+        messageRef1.child('isRemove').set(false);
+        // }
+        messageRef1
+          .child('lastmsgtime')
+          .set(firebase?.database?.ServerValue?.TIMESTAMP);
+        messageRef2.once('value').then(snap => {
+          if (snap.exists()) {
+            messageRef2.child('lastmsg').set(myMessage);
+            messageRef2
+              .child('unreadCount')
+              .set(snap.child('unreadCount').val() + 1);
+            // if (fromContact) {
+            messageRef2.child('isRemove').set(false);
+            // }
+            messageRef2
+              .child('lastmsgtime')
+              .set(firebase?.database?.ServerValue?.TIMESTAMP);
+            updateNewMsg(newMessage);
           } else {
-            messagekey2 = chatRoomRef2?.push();
-            const message2 = messagekey2.set(newMessage).then(() => {
-              // messagekey2.child('status').update({status: setStatus('sent')});
+            messageRef2.set(chatRoomReceiver).then(res => {
+              updateNewMsg(newMessage);
             });
-            console.log(messagekey2, 'key2');
           }
         });
-      });
+      } else {
+        messageRef1.set(chatRoomSender).then(() => {
+          messageRef2.once('value').then(snap => {
+            if (snap.exists()) {
+              messageRef2.child('lastmsg').set(myMessage);
+              messageRef2
+                .child('unreadCount')
+                .set(snap.child('unreadCount').val() + 1);
+              // if (fromContact) {
+              messageRef2.child('isRemove').set(false);
+              // }
+              messageRef2
+                .child('lastmsgtime')
+                .set(firebase?.database?.ServerValue?.TIMESTAMP);
+              updateNewMsg(newMessage);
+            } else {
+              messageRef2.set(chatRoomReceiver).then(res => {
+                updateNewMsg(newMessage);
+              });
+            }
+          });
+        });
+      }
     });
-
+    setIsMessageSent(true);
     //update the list of messages with new messages
     //prevMessages => [newMessage, ...prevMessages]:
     // The callback function passed to setDisplayText receives the previous state (prevMessages).
@@ -273,7 +326,7 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     //setDisplayText(prevMessages => [newMessage, ...prevMessages]);
 
     //this line clears the input field
-    setMyMessage('');
+    // setMyMessage('');
     //console.log('message==>>', myMessage);
 
     //Purpose: This line ensures that the FlatList component scrolls to the top to show the most recent message.
@@ -282,6 +335,24 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     //Use Case: This is often used to ensure that the latest message or item in the list is visible when a new item is added
     flatListRef.current?.scrollToOffset({offset: 0, animated: true});
   };
+
+  const updateNewMsg = (newMessage: any) => {
+    chatRoomRef1?.once('value')?.then(async snapshot => {
+      let messagekey1: any;
+      let messagekey2: any;
+
+      if (snapshot?.exists()) {
+        messagekey1 = chatRoomRef1?.push();
+        messagekey1.set(newMessage).then(() => {});
+        console.log(messagekey1, 'key1');
+      } else {
+        messagekey2 = chatRoomRef2?.push();
+        messagekey2.set(newMessage).then(() => {});
+        console.log(messagekey2, 'key2');
+      }
+    });
+  };
+
   const updateMessageStatusToRead = async () => {
     const unreadMessagesSnapshot = await chatRef
       .orderByChild('status')
@@ -379,6 +450,7 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     const isSender = item.senderUid === currentUserUId;
 
     let statusIcon;
+
     if (item.status === 'false') {
       statusIcon = (
         <EvilIcons style={styles.sendStatus} name="clock" size={20} />
@@ -420,7 +492,15 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
               {item.timeStamp}
             </Text>
           )}
-          {isSender && statusIcon}
+          <View
+            style={{
+              width: 20,
+              height: 20,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+            {isSender && statusIcon}
+          </View>
         </View>
       </View>
     );
@@ -457,20 +537,34 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
         contentContainerStyle={styles.messagesContainer}
       />
 
-      <View style={styles.inputWrapper}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Type a message"
-            value={myMessage}
-            onChangeText={setMyMessage}
-            multiline={true}
-          />
-        </View>
-        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
-          <MaterialCommunityIcons name="send" size={25} color={'white'} />
-        </TouchableOpacity>
-      </View>
+      <Formik
+        initialValues={{message: ''}}
+        onSubmit={(values, {resetForm}) => {
+          resetForm();
+          handleSend(values.message);
+          setIsMessageSent(false);
+        }}>
+        {({handleChange, handleBlur, handleSubmit, values}) => (
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Type a message"
+                value={values.message}
+                onChangeText={handleChange('message')}
+                onBlur={handleBlur('message')}
+                multiline={true}
+              />
+            </View>
+            <TouchableOpacity
+              disabled={!isMessageSent}
+              onPress={() => handleSubmit()}
+              style={styles.sendButton}>
+              <MaterialCommunityIcons name="send" size={25} color={'white'} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </Formik>
     </KeyboardAvoidingView>
   );
 });

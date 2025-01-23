@@ -1,6 +1,4 @@
-import Input from "./input";
+import Input from './input';
+import ButtonPrimary from './button-primary';
 
-
-
-
-export {Input};
+export {Input, ButtonPrimary};

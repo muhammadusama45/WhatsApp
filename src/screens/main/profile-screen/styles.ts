@@ -11,6 +11,7 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
   logoutBtn: {
+    marginBottom: 90,
     justifyContent: 'center',
     margin: 20,
     alignItems: 'center',

@@ -44,11 +44,6 @@ const ContactScreen = memo(({navigation}: IProps) => {
   };
 
   const fetchUsers = () => {
-    console.log(
-      'visibledata[visibledata?.length - 1]?.id ',
-      visibledata[visibledata?.length - 1]?.id,
-    );
-
     Query()
       .once('value')
       .then(snapshot => {
@@ -58,6 +53,7 @@ const ContactScreen = memo(({navigation}: IProps) => {
           name: users[key].name || 'No Name',
           image: users[key].profileImageUrl,
         }));
+        // .filter(user => user.id !== currentUserUid);
         if (
           paginationData[paginationData?.length - 1]?.id !=
           visibledata[paginationData?.length - 1]?.id
@@ -67,7 +63,6 @@ const ContactScreen = memo(({navigation}: IProps) => {
         const currentUser = paginationData.find(
           user => user.id === currentUserUid,
         );
-        console.log('currentUser>>>>>>>>>>>>>>>>>>>>>', currentUser?.image);
         if (currentUser) {
           setCurrentUserImage(currentUser?.image);
         }
@@ -176,17 +171,41 @@ const ContactScreen = memo(({navigation}: IProps) => {
   };
 
   const renderItem = ({item, index}: any) => {
+    const isCurrentUser = item.id === currentUserUid;
+
     return (
       <TouchableOpacity
         key={item?.id}
         style={styles.mainView}
         onPress={() => {
-          navigate('Chat', {
-            chatName: item.name,
-            imageIcon: item.image,
-            currentUserUId: currentUserUid,
-            recipientUid: item.id,
-          });
+          console.log();
+          database()
+            .ref('users')
+            .child(currentUserUid ?? '')
+            .child('connections')
+            .child(`${currentUserUid}_${item.id}`)
+            .child('chatVisible')
+            .once('value')
+            .then(snap => {
+              if (snap.exists()) {
+                navigate('Chat', {
+                  chatName: item.name,
+                  imageIcon: item.image,
+                  currentUserUId: currentUserUid,
+                  recipientUid: item.id,
+                  fromContact: true,
+                  chatVisible: snap.val(),
+                });
+              } else {
+                navigate('Chat', {
+                  chatName: item.name,
+                  imageIcon: item.image,
+                  currentUserUId: currentUserUid,
+                  recipientUid: item.id,
+                  fromContact: true,
+                });
+              }
+            });
         }}>
         <Image
           source={
@@ -208,7 +227,7 @@ const ContactScreen = memo(({navigation}: IProps) => {
             fontSize: 18,
             fontWeight: 'bold',
           }}>
-          {item.name}
+          {isCurrentUser ? `${item.name} (You)` : item.name}
         </Text>
       </TouchableOpacity>
     );
@@ -217,9 +236,11 @@ const ContactScreen = memo(({navigation}: IProps) => {
   //that pass the test implemented by the provided function.
   //lowercase func converts every name to  lowercase to make it case insensitive
   //includes checks item.name converted to lowercase contains the search text.
-  const filteredData = visibledata.filter(item =>
-    item.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredData = visibledata.filter(item => {
+    const userName =
+      item.id === currentUserUid ? `${item.name} (You)` : item.name;
+    return userName.toLowerCase().includes(search.toLowerCase());
+  });
   return (
     <View style={{flex: 1, backgroundColor: 'white'}}>
       <ContactHeader title="Contacts" />

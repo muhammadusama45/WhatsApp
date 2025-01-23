@@ -1,8 +1,10 @@
 import {createSlice} from '@reduxjs/toolkit';
 import {AuthState, ChatState} from '../../states';
+import {uniqBy} from 'lodash';
 
 const initialState: ChatState = {
   allMessages: [],
+
   loading: false,
   error: '',
 };
@@ -12,7 +14,7 @@ export const chatSlice = createSlice({
   initialState: initialState,
   reducers: {
     addMessage: (state, {payload}) => {
-      state.allMessages = [payload, ...state.allMessages];
+      state.allMessages = uniqBy([payload, ...state.allMessages], 'id');
     },
     updateMessage: (state, {payload}) => {
       const index = state.allMessages?.findIndex(
@@ -23,13 +25,14 @@ export const chatSlice = createSlice({
       }
     },
     addAllMessage: (state, {payload}) => {
-      state.allMessages = payload;
+      state.allMessages = uniqBy(payload, 'id');
     },
     clearChat: (state, {payload}) => {
       state.allMessages = [];
     },
   },
 });
+
 export const {addMessage, addAllMessage, clearChat, updateMessage} =
   chatSlice.actions;
 

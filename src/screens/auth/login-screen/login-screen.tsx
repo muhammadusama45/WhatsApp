@@ -1,54 +1,61 @@
-import React, {memo, useId, useState} from 'react';
+import React, {memo, useEffect, useState} from 'react';
 import {
-  View,
-  Image,
-  TouchableOpacity,
-  Text,
-  Alert,
   ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import {styleslogin} from './styles';
-import {Input} from '../../../components';
-import auth from '@react-native-firebase/auth';
 import {useDispatch, useSelector} from 'react-redux';
+import {ButtonPrimary, Input} from '../../../components';
+import {styleslogin} from './styles';
 
-import {AppDispatch, RootState} from '../../../redux/store';
-import ForgetPassword from './fogetPassword';
+import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
+import {navigate} from '../../../../root-navigation';
 import {handleLogin} from '../../../redux/slice/auth/action/login';
+import {AppDispatch, RootState} from '../../../redux/store';
+
 interface IProps {
   navigation: any;
 }
 const LoginScreen = memo(({navigation}: IProps) => {
   const [email, setmyemail] = useState<string>('usamaanwar745@gmail.com');
   const [password, setmypassword] = useState<string>('123456');
-  //const [loading, setLoading] = useState(false);
+  const [secure, onsecure] = useState(true);
   const dispatch = useDispatch<AppDispatch>();
   const {isAuth, loading, error} = useSelector(
     (state: RootState) => state.auth,
   );
-  //console.log(authdata);
+
   const submit = () => {
     if (email === '' || password === '') {
       Alert.alert('Please enter email and password!');
     }
     dispatch(handleLogin({email, password}));
   };
-  //try and catch used to handle any errors
 
-  //console.log('User Loged In!');
-
-  // } catch (error) {
-  //console.error('Error logging in:', error);
-  // Alert.alert('Error', 'Invalid email or password. Please try again.');
-  // }
-  // setLoading(false);
-  //  }
-  //  };
+  const handleSecure = () => {
+    onsecure(toggle => !toggle);
+  };
 
   return (
-    <View style={{flex: 1, justifyContent: 'center'}}>
-      <>
-        <View style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
+    <KeyboardAvoidingView
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      style={{flex: 1}}>
+      <ScrollView style={{height: '100%'}} contentContainerStyle={{flex: 1}}>
+        <View
+          style={{
+            justifyContent: 'center',
+            alignItems: 'center',
+            flex: 1,
+          }}>
           <Image
             source={require('../../../assets/fb-image/facebook.png')}
             style={{
@@ -57,19 +64,45 @@ const LoginScreen = memo(({navigation}: IProps) => {
             }}
           />
         </View>
+
         <View style={{flex: 1.5}}>
           <Input
             placeholder="Mobile number or email address"
-            value={email}
+            value={email.toLowerCase()}
             onChangeText={setmyemail}
+            children={
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <MaterialCommunityIcons name={'email'} size={25} />
+              </View>
+            }
           />
+
           <Input
             placeholder="Password"
             value={password}
             onChangeText={setmypassword}
-            secureTextEntry={true}
+            secureTextEntry={secure}
+            children={
+              <TouchableOpacity
+                onPress={handleSecure}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <MaterialCommunityIcon
+                  name={secure ? 'eye-off' : 'eye'}
+                  size={25}
+                />
+              </TouchableOpacity>
+            }
           />
-          <TouchableOpacity onPress={submit} style={styleslogin.loginBtn}>
+          {/* <TouchableOpacity onPress={submit} style={styleslogin.loginBtn}>
             {loading ? (
               <ActivityIndicator
                 size={'small'}
@@ -79,28 +112,44 @@ const LoginScreen = memo(({navigation}: IProps) => {
             ) : (
               <Text style={styleslogin.loginbtnText}>Log in</Text>
             )}
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+          <ButtonPrimary
+            loading={loading}
+            title="Login"
+            onPress={() => {
+              submit();
+            }}
+          />
+
           <TouchableOpacity
             style={{alignItems: 'center'}}
-            onPress={() => navigation.navigate('Forget')}>
+            onPress={() => navigate('Forget')}>
             <Text
               style={{
                 fontSize: 18,
                 margin: 10,
                 fontWeight: '600',
-                color: 'black',
+                color: 'blue',
               }}>
               Forgotten Password?
             </Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Signup')}
+
+        <ButtonPrimary
+          title="Create new account"
+          textStyle={{color: 'blue'}}
+          style={{backgroundColor: 'white', marginBottom: 10}}
+          onPress={() => navigate('Signup')}
+        />
+
+        {/* <TouchableOpacity
+          onPress={() => navigate('Signup')}
           style={styleslogin.createbtn}>
           <Text style={styleslogin.createbtnText}>Create new account</Text>
-        </TouchableOpacity>
-      </>
-    </View>
+        </TouchableOpacity> */}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 });
 export default LoginScreen;

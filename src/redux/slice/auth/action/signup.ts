@@ -19,6 +19,7 @@ export const SignUp = createAsyncThunk<
       const obj = {
         name: `${payload?.name} ${payload?.surname}`,
         email: payload.email,
+        gender: payload?.gender,
         uid: response?.user?.uid,
       };
 

@@ -1,5 +1,11 @@
 import React, {useEffect, useState} from 'react';
-import {Image, View, Text, TouchableOpacity} from 'react-native';
+import {
+  Image,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import {
   launchCamera,
   launchImageLibrary,
@@ -10,13 +16,18 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import storage from '@react-native-firebase/storage';
 import {RootState} from '../../redux/store';
-import {useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
 import database, {FirebaseDatabaseTypes} from '@react-native-firebase/database';
+import RNFS from 'react-native-fs';
+import {updateProfileImage} from '../../redux/slice/auth/auth-slice';
 
 const ImagePicker = () => {
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const dispatch = useDispatch();
+  const {profileImage} = useSelector((state: RootState) => state.auth);
+  const [imageUri, setImageUri] = useState<string | null>();
   const [showBox, setShowBox] = useState(false);
   const {uid} = useSelector((state: RootState) => state.auth);
+  const [localImagePath, setLocalImagePath] = useState<string | null>(null);
 
   const handleBox = () => {
     setShowBox(!showBox);
@@ -146,6 +157,8 @@ const ImagePicker = () => {
     try {
       await task;
       const url = await reference.getDownloadURL();
+      dispatch(updateProfileImage(url));
+      await downloadAndCacheImage(url);
       console.log(url);
       return url;
     } catch (error) {
@@ -154,19 +167,58 @@ const ImagePicker = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchImage = async () => {
-      const snapshot = await database().ref(`users/${uid}`).once('value');
-      const data = snapshot.val();
-      if (data && data.profileImageUrl) {
-        setImageUri(data.profileImageUrl);
-        console.log(data.profileImageUrl);
-      }
-    };
+  const downloadAndCacheImage = async (imageUrl: string) => {
+    try {
+      console.log('imageUrl', imageUrl);
+      const splitPath = imageUrl
+        .substring(imageUrl.lastIndexOf('-'))
+        .split('-')[1];
+      console.log('splitPath', splitPath);
+      const filePath = `${RNFS.DocumentDirectoryPath}/${splitPath}.jpg`;
+      console.log('filePath', filePath);
 
-    fetchImage();
+      const fileExists = await RNFS.exists(filePath);
+      console.log('fileExists', fileExists);
+      if (!fileExists) {
+        RNFS.downloadFile({
+          fromUrl: imageUrl,
+          toFile: filePath,
+        }).promise.then(data => {
+          setLocalImagePath(`file://${filePath}`);
+          console.log(1, `file://${filePath}`);
+        });
+      } else {
+        console.log(2, `file://${filePath}`);
+        setLocalImagePath(`file://${filePath}`);
+      }
+    } catch (error) {
+      console.error('Error caching image locally:', error);
+      return imageUrl;
+    }
+  };
+
+  useEffect(() => {
+    const imagePath = database().ref(`users/${uid}/profileImageUrl`);
+    imagePath.on('value', snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        setImageUri(data);
+        dispatch(updateProfileImage(data));
+
+        console.log(data);
+      }
+    });
+
+    return () => {
+      imagePath.off();
+    };
   }, [uid]);
 
+  useEffect(() => {
+    downloadAndCacheImage(profileImage);
+  });
+
+  console.log('Image URL saved successfully', localImagePath);
   return (
     <View
       style={{
@@ -179,19 +231,67 @@ const ImagePicker = () => {
         alignItems: 'center',
         zIndex: 10000,
       }}>
-      <Image
-        source={
-          imageUri
-            ? {uri: imageUri}
-            : require('../../assets/list-images/man1.png')
-        }
-        style={{
-          width: 200,
-          height: 200,
-          borderRadius: 100,
-          zIndex: 10000,
-        }}
-      />
+      {
+        localImagePath ? (
+          <Image
+            // source={
+            //   imageUri
+            //     ? {uri: imageUri}
+            //     : require('../../assets/list-images/man1.png')
+            // }
+            source={{uri: localImagePath}}
+            style={{
+              width: 200,
+              height: 200,
+              borderRadius: 100,
+              zIndex: 10000,
+            }}
+          />
+        ) : imageUri ? (
+          <Image
+            // source={
+            //   imageUri
+            //     ? {uri: imageUri}
+            //     : require('../../assets/list-images/man1.png')
+            // }
+            source={{uri: imageUri}}
+            style={{
+              width: 200,
+              height: 200,
+              borderRadius: 100,
+              zIndex: 10000,
+            }}
+          />
+        ) : (
+          <Image
+            // source={
+            //   imageUri
+            //     ? {uri: imageUri}
+            //     : require('../../assets/list-images/man1.png')
+            // }
+            source={require('../../assets/list-images/man1.png')}
+            style={{
+              width: 200,
+              height: 200,
+              borderRadius: 100,
+              zIndex: 10000,
+            }}
+          />
+        )
+        //  : (
+        //   <View
+        //     style={{
+        //       width: 200,
+        //       height: 200,
+        //       borderRadius: 10,
+        //       marginVertical: 5,
+        //       alignItems: 'center',
+        //       justifyContent: 'center',
+        //     }}>
+        //     <ActivityIndicator size={'small'} color={'black'}></ActivityIndicator>
+        //   </View>
+        // )
+      }
 
       <TouchableOpacity
         onPress={handleBox}

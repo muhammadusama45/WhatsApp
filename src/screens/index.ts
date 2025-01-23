@@ -6,7 +6,9 @@ import InboxScreen from './main/inbox-screen/inbox-screen';
 import PatientScreen from './main/patient-screen/patient-screen';
 import ProfileScreen from './main/profile-screen/profile-screen';
 import ForgetPassword from './auth/login-screen/fogetPassword';
-import ContactScreen from './main/inbox-screen/all-users/all-users';
+import ContactScreen from './main/inbox-screen/all-contacts/contacts-screen';
+import PracticeScreen from './main/practice/practice-screen';
+import ViewScreen from './main/view-screen/view-screen';
 export {
   LoginScreen,
   Signup,
@@ -17,4 +19,6 @@ export {
   PatientScreen,
   ForgetPassword,
   ContactScreen,
+  PracticeScreen,
+  ViewScreen,
 };

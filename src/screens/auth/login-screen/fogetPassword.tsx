@@ -4,6 +4,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import React, {memo, useState} from 'react';
 import {Input} from '../../../components';
@@ -12,6 +14,7 @@ import {AppDispatch, RootState} from '../../../redux/store';
 
 import Topbar from '../../../components/topbar/topbar';
 import {forgetPassword} from '../../../redux/slice/auth/action/forgot-password';
+import {ScrollView} from 'react-native';
 
 interface IProps {
   navigation: any;
@@ -26,38 +29,43 @@ const ForgetPassword = memo(({navigation}: IProps) => {
     dispatch(forgetPassword({email}));
   };
   return (
-    <View>
+    <KeyboardAvoidingView
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      style={{flex: 1}}>
       <Topbar text="Forget Password" />
-      <View style={{margin: 10}}>
-        <Input
-          placeholder="Enter Your Email"
-          onChangeText={setemail}
-          value={email}
-        />
-        <TouchableOpacity
-          onPress={handleForgetPassword}
-          style={styles.resetEmailBtn}>
-          {loading ? (
-            <ActivityIndicator
-              size={'small'}
-              color={'white'}
-              style={{backgroundColor: 'transparent', alignSelf: 'center'}}
-            />
-          ) : (
-            <Text style={{fontSize: 15, color: 'white'}}>
-              Send Reset Email"
-            </Text>
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.Btn}
-          onPress={() => {
-            navigation.replace('Login');
-          }}>
-          <Text style={{fontSize: 15, color: 'white'}}>Login Instead</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <ScrollView style={{height: '100%'}} contentContainerStyle={{flex: 1}}>
+        <View style={{margin: 10}}>
+          <Input
+            placeholder="Enter Your Email"
+            onChangeText={setemail}
+            value={email.toLowerCase()}
+          />
+          <TouchableOpacity
+            onPress={handleForgetPassword}
+            style={styles.resetEmailBtn}>
+            {loading ? (
+              <ActivityIndicator
+                size={'small'}
+                color={'white'}
+                style={{backgroundColor: 'transparent', alignSelf: 'center'}}
+              />
+            ) : (
+              <Text style={{fontSize: 15, color: 'white'}}>
+                Send Reset Email"
+              </Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.Btn}
+            onPress={() => {
+              navigation.replace('Login');
+            }}>
+            <Text style={{fontSize: 15, color: 'white'}}>Login Instead</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 });
 export default ForgetPassword;

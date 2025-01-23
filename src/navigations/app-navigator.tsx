@@ -15,8 +15,6 @@ import {
   ProfileScreen,
   Signup,
 } from '../screens';
-import MyTabs from './bottom-tab';
-import StaticTabbar from './static';
 
 const Stack = createNativeStackNavigator();
 

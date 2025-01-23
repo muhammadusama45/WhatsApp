@@ -1,5 +1,10 @@
 import {StyleSheet} from 'react-native';
 export const styles = StyleSheet.create({
+  listContainer: {
+    //paddingBottom: 80,
+    zIndex: 500,
+    padding: 10,
+  },
   mainview: {
     marginHorizontal: 5,
     borderRadius: 10,
@@ -53,11 +58,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'white',
     zIndex: 500,
   },
-  listContainer: {
-    //paddingBottom: 80,
-    zIndex: 500,
-    padding: 10,
-  },
+
   mainView: {
     zIndex: 500,
     flexDirection: 'row',
@@ -79,11 +80,9 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.32,
   },
   row: {
-    zIndex: 500,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 5,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 10,
   },
   nameText: {
     fontSize: 18,

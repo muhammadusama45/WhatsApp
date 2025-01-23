@@ -7,6 +7,7 @@ export type AuthState = {
   loading: boolean;
   error: string;
   gender: string;
+  profileImage: string;
 };
 
 export type InboxState = {

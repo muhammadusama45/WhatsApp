@@ -1,3 +1,5 @@
+import {FetchDataPayload} from './request-payload';
+
 export type LoginPayload = {
   email: string;
   password: string;
@@ -15,3 +17,5 @@ export type SignupPayload = {
 export type forgetPayload = {
   email: string;
 };
+
+export type PayloadType = FetchDataPayload;

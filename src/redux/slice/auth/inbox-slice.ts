@@ -55,6 +55,21 @@ export const inboxSlice = createSlice({
 
       state.visibleData = previousChat;
     },
+    setLocalImage: (state, action) => {
+      const childSnapshot = action.payload;
+      const previousChat = [...state.visibleData];
+
+      const index = previousChat?.findIndex(
+        (item: any) => childSnapshot?.id == item?.id,
+      );
+
+      if (index > -1) {
+        const newObj = {...previousChat[index], image: action?.payload?.url};
+        previousChat.splice(index, 1, newObj);
+      }
+
+      state.visibleData = previousChat;
+    },
 
     setSingleChatForNameandImage: (state, action) => {
       const childSnapshot = action.payload;
@@ -80,6 +95,7 @@ export const {
   setSingleChatForNameandImage,
   clearInbox,
   setRemovedChat,
+  setLocalImage,
 } = inboxSlice.actions;
 
 export default inboxSlice.reducer;

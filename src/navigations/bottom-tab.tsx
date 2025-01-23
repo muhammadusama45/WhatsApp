@@ -1,11 +1,19 @@
 import React from 'react';
 import {createMaterialBottomTabNavigator} from '@react-navigation/material-bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Octicons from 'react-native-vector-icons/Octicons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
-import {InboxScreen, PatientScreen, ProfileScreen} from '../screens';
+import {
+  InboxScreen,
+  PatientScreen,
+  PracticeScreen,
+  ProfileScreen,
+  ViewScreen,
+} from '../screens';
 import {BottomFabBar} from 'rn-wave-bottom-bar';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {size} from 'lodash';
+import CustomCameraScreen from '../screens/camera';
+import viewScreen from '../screens/main/view-screen/view-screen';
 
 const Tab = createBottomTabNavigator();
 
@@ -33,6 +41,27 @@ const MyTabs = () => {
         <MaterialCommunityIcons name="account" color={color} size={26} />
       ),
     },
+    {
+      name: 'Practice',
+      component: PracticeScreen,
+      icon: ({color}: any) => (
+        <Octicons name="stopwatch" color={color} size={26} />
+      ),
+    },
+    {
+      name: 'View',
+      component: ViewScreen,
+      icon: ({color}: any) => (
+        <Octicons name="stopwatch" color={color} size={26} />
+      ),
+    },
+    // {
+    //   name: 'Camera',
+    //   component: CustomCameraScreen,
+    //   icon: ({color}: any) => (
+    //     <Octicons name="stopwatch" color={color} size={26} />
+    //   ),
+    // },
   ];
 
   return (
@@ -41,8 +70,10 @@ const MyTabs = () => {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: 'blue',
+        tabBarInactiveTintColor: 'white',
         tabBarActiveBackgroundColor: 'blue',
-        tabBarInactiveBackgroundColor: 'red',
+        tabBarInactiveBackgroundColor: 'black',
+
         // tabBarItemStyle: {
         //   justifyContent: 'center',
         //   alignItems: 'center',

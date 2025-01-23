@@ -1,8 +1,11 @@
-import React, {memo, useState} from 'react';
+import React, {memo, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -12,6 +15,8 @@ import {ButtonPrimary, Input} from '../../../components';
 import {styleslogin} from './styles';
 
 import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import {navigate} from '../../../../root-navigation';
 import {handleLogin} from '../../../redux/slice/auth/action/login';
 import {AppDispatch, RootState} from '../../../redux/store';
@@ -40,9 +45,17 @@ const LoginScreen = memo(({navigation}: IProps) => {
   };
 
   return (
-    <View style={{flex: 1, justifyContent: 'center'}}>
-      <>
-        <View style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
+    <KeyboardAvoidingView
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      style={{flex: 1}}>
+      <ScrollView style={{height: '100%'}} contentContainerStyle={{flex: 1}}>
+        <View
+          style={{
+            justifyContent: 'center',
+            alignItems: 'center',
+            flex: 1,
+          }}>
           <Image
             source={require('../../../assets/fb-image/facebook.png')}
             style={{
@@ -51,32 +64,44 @@ const LoginScreen = memo(({navigation}: IProps) => {
             }}
           />
         </View>
+
         <View style={{flex: 1.5}}>
           <Input
             placeholder="Mobile number or email address"
             value={email.toLowerCase()}
             onChangeText={setmyemail}
+            children={
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <MaterialCommunityIcons name={'email'} size={25} />
+              </View>
+            }
           />
-          <TouchableOpacity
-            onPress={handleSecure}
-            style={{
-              position: 'absolute',
-              left: '85%',
-              top: '15%',
-              zIndex: 1000,
-              marginHorizontal: 10,
-            }}>
-            <MaterialCommunityIcon
-              name={secure ? 'eye-off' : 'eye'}
-              size={30}
-            />
-          </TouchableOpacity>
 
           <Input
             placeholder="Password"
             value={password}
             onChangeText={setmypassword}
-            secureTextEntry={secure}></Input>
+            secureTextEntry={secure}
+            children={
+              <TouchableOpacity
+                onPress={handleSecure}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <MaterialCommunityIcon
+                  name={secure ? 'eye-off' : 'eye'}
+                  size={25}
+                />
+              </TouchableOpacity>
+            }
+          />
           {/* <TouchableOpacity onPress={submit} style={styleslogin.loginBtn}>
             {loading ? (
               <ActivityIndicator
@@ -117,13 +142,14 @@ const LoginScreen = memo(({navigation}: IProps) => {
           style={{backgroundColor: 'white', marginBottom: 10}}
           onPress={() => navigate('Signup')}
         />
+
         {/* <TouchableOpacity
           onPress={() => navigate('Signup')}
           style={styleslogin.createbtn}>
           <Text style={styleslogin.createbtnText}>Create new account</Text>
         </TouchableOpacity> */}
-      </>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 });
 export default LoginScreen;

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, {useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -14,14 +14,11 @@ import {
 interface Message {
   id: string;
   text: string;
- 
 }
 interface IProps {
   route: any;
   navigation: any;
-  
 }
-
 
 const ChatScreen: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,35 +31,32 @@ const ChatScreen: React.FC = () => {
         id: Date.now().toString(),
         text: newMessage,
       };
-      setMessages((prevMessages) => [message, ...prevMessages]);
+      setMessages(prevMessages => [message, ...prevMessages]);
       setNewMessage('');
       // Scroll to the bottom after sending a new message
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      flatListRef.current?.scrollToOffset({offset: 0, animated: true});
     }
   };
 
-  const renderItem = ({ item }: { item: Message }) => (
+  const renderItem = ({item}: {item: Message}) => (
     <View style={[styles.messageContainer]}>
       <Text style={styles.messageText}>{item.text}</Text>
     </View>
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={'padding'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={'padding'}>
       <FlatList
         ref={flatListRef}
         data={messages}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         inverted // This will make the latest messages appear at the bottom
         contentContainerStyle={styles.messagesContainer}
       />
       <View style={styles.inputContainer}>
         <TextInput
-        multiline
+          multiline
           style={styles.textInput}
           value={newMessage}
           onChangeText={setNewMessage}
@@ -89,9 +83,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#e1e1e1',
     padding: 10,
     borderRadius: 5,
-    maxWidth:'70%',
-    justifyContent:'flex-end',
-    alignSelf:'flex-end'
+    maxWidth: '70%',
+    justifyContent: 'flex-end',
+    alignSelf: 'flex-end',
   },
   messageText: {
     fontSize: 16,
@@ -103,7 +97,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#ddd',
     backgroundColor: '#f9f9f9',
-    justifyContent:'center'
+    justifyContent: 'center',
   },
   textInput: {
     flex: 1,
@@ -112,14 +106,14 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     marginRight: 10,
-    maxHeight:90,
+    maxHeight: 90,
   },
   sendButton: {
     backgroundColor: '#007bff',
     padding: 10,
     borderRadius: 5,
-    justifyContent:'center',
-    alignItems:'center'
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sendButtonText: {
     color: '#fff',
@@ -128,4 +122,3 @@ const styles = StyleSheet.create({
 });
 
 export default ChatScreen;
-

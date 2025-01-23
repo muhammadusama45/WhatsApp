@@ -1,22 +1,29 @@
-import React, {memo} from 'react';
-import {StyleSheet, TextInput, View} from 'react-native';
+import React, {memo, useState} from 'react';
+import {StyleSheet, TextInput, TouchableOpacity, View} from 'react-native';
+import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 interface IProps {
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
+  children?: JSX.Element;
 }
 const Input = memo(
-  ({placeholder, value, onChangeText, secureTextEntry}: IProps) => {
+  ({placeholder, value, onChangeText, secureTextEntry, children}: IProps) => {
+    const [secure, onsecure] = useState(true);
+    const handleSecure = () => {
+      onsecure(toggle => !toggle);
+    };
     return (
       <View style={styles.inputContainer}>
         <TextInput
-          style={{}}
+          style={{flex: 1}}
           placeholder={placeholder}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
         />
+        {children}
       </View>
     );
   },
@@ -24,12 +31,13 @@ const Input = memo(
 export default Input;
 const styles = StyleSheet.create({
   inputContainer: {
-    justifyContent: 'center',
-    backgroundColor:'#fff',
+    flexDirection: 'row',
+    backgroundColor: 'white',
+
     paddingHorizontal: 10,
     height: 48,
-    marginBottom:10,
-    marginHorizontal:10,
+    marginBottom: 10,
+    marginHorizontal: 10,
     borderRadius: 10,
     fontSize: 20,
     //fontWeight:"bold",

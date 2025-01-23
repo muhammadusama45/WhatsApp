@@ -13,16 +13,19 @@ import {
   KeyboardAvoidingView,
   TextInput,
   FlatList,
+  Platform,
 } from 'react-native';
+import Toast from 'react-native-simple-toast';
 import {Formik} from 'formik';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {useDispatch, useSelector} from 'react-redux';
 import {RootState} from '../../../redux/store';
-import _ from 'lodash';
+import _, {uniqBy} from 'lodash';
 import moment from 'moment';
 import {
   addAllMessage,
@@ -32,15 +35,19 @@ import {
 } from '../../../redux/slice/auth/chat-slice';
 import uuid from 'react-native-uuid';
 import {useIsFocused} from '@react-navigation/native';
+import ChatImagePicker from '../../../components/chat-input-items/chat-image-picker';
+import ChatImage from './chat-image';
 
 interface IMessage {
   id: string;
   text: string;
   senderUid: string;
   timeStamp: any;
+  timeDay: any;
   receiverUid: string;
   status: string;
   keyId: string;
+  msgType: string;
 }
 interface chatRoom {
   lastmsgtime: any;
@@ -75,9 +82,11 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     chatId,
   } = route.params;
   const [isMessageSent, setIsMessageSent] = useState<boolean>(true);
-  const [displayText, setDisplayText] = useState<IMessage[]>([]);
+
   const {name} = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
+  const [visibleHeader, setVisibleHeader] = useState<string | null>(null);
+
   const {allMessages} = useSelector((state: RootState) => state.chat);
   const isFocused = useIsFocused();
 
@@ -103,29 +112,33 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
   };
 
   const chatObj = (childSnapshot: FirebaseDatabaseTypes.DataSnapshot) => {
+    const timeDay = childSnapshot.child('timeDay').val();
+    const msgMomentDay = moment(timeDay);
     return {
       id: childSnapshot.child('id').val(),
+      msgType: childSnapshot.child('msgType').val(),
       text: childSnapshot.child('text').val(),
       senderUid: childSnapshot.child('senderUid').val(),
-      timeStamp: moment(childSnapshot.child('timeStamp').val()).format(
-        'hh:mm A',
-      ),
+      timeDay: msgMomentDay,
+      timeStamp: childSnapshot.child('timeStamp').val(),
       receiverUid: childSnapshot.child('receiverUid').val(),
       status: childSnapshot.child('status').val(),
       keyId: childSnapshot.key ?? '',
     };
   };
+
   const chatRef = database().ref(`chats/${userRef1}`);
   const chatRef2 = database().ref(`chats/${userRef2}`);
-
+  const chatList: Array<IMessage> = [];
   const chatMapper = (
     snapshot: FirebaseDatabaseTypes.DataSnapshot,
   ): Array<IMessage> => {
-    const chatList: Array<IMessage> = [];
     snapshot?.forEach(childSnapshot => {
       chatList.unshift(chatObj(childSnapshot));
+
       return undefined;
     });
+
     return chatList;
   };
 
@@ -201,10 +214,14 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     };
   }, []);
 
-  const handleSend = async (myMessage: string) => {
+  const handleSend = async (
+    myMessage: string,
+    firebaseImageUrl?: string,
+    isImage = false,
+  ) => {
     //trim() removes white spaces from the beginnig and endinng of the string thus prevents from sending blank messages
     //=== strict equality operator used to compare two values it will return true if both have same value and have same type otherwise it will false
-    if (myMessage.trim() === '') return;
+    if (!isImage && myMessage.trim() === '') return;
     const senderSnapshot = await database()
       .ref(`users/${currentUserUId}`)
       .once('value');
@@ -226,18 +243,25 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     //current timestamp (in milliseconds). This ensures that each message has a distinct ID.
     //text: myMessage: Sets the content of the message to the current value of myMessage.
 
+    console.log('firebaseImageUrl:', firebaseImageUrl);
+
     const newMessage: any = {
       id: uuid.v4().toString(),
       chatId: currentUserUId ? chatRef.key : recipientUid ? chatRef2.key : null,
       timeStamp: firebase?.database?.ServerValue?.TIMESTAMP,
-      text: myMessage,
+      timeDay: firebase?.database?.ServerValue?.TIMESTAMP,
+      text: isImage ? firebaseImageUrl : myMessage,
       senderUid: currentUserUId,
       receiverUid: recipientUid,
       status: 'true',
+      msgType: isImage ? 'photo' : 'text',
     };
+
+    console.log(newMessage, 'newMessage');
+
     const chatRoomSender: chatRoom = {
       lastmsgtime: firebase?.database?.ServerValue?.TIMESTAMP,
-      lastmsg: myMessage,
+      lastmsg: isImage ? 'Sent an image' : myMessage,
       chatName: chatName,
       secondUser: recipientUid,
       image: receiverImage,
@@ -245,7 +269,7 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     };
     const chatRoomReceiver: chatRoom = {
       lastmsgtime: firebase?.database?.ServerValue?.TIMESTAMP,
-      lastmsg: myMessage,
+      lastmsg: isImage ? 'Sent an image' : myMessage,
       chatName: name,
       secondUser: currentUserUId,
       image: senderImage,
@@ -255,13 +279,15 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
 
     AddNewMessages({
       ...newMessage,
-      timeStamp: moment(new Date()).format('hh:mm A'),
+      timeStamp: new Date(),
       status: 'false',
     });
 
+    const lastMsgText = isImage ? 'Sent a photo' : myMessage;
+
     messageRef1.once('value').then(snap => {
       if (snap.exists()) {
-        messageRef1.child('lastmsg').set(myMessage);
+        messageRef1.child('lastmsg').set(lastMsgText);
         // if (fromContact) {
         messageRef1.child('isRemove').set(false);
         // }
@@ -270,7 +296,7 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
           .set(firebase?.database?.ServerValue?.TIMESTAMP);
         messageRef2.once('value').then(snap => {
           if (snap.exists()) {
-            messageRef2.child('lastmsg').set(myMessage);
+            messageRef2.child('lastmsg').set(lastMsgText);
             messageRef2
               .child('unreadCount')
               .set(snap.child('unreadCount').val() + 1);
@@ -312,27 +338,7 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
       }
     });
     setIsMessageSent(true);
-    //update the list of messages with new messages
-    //prevMessages => [newMessage, ...prevMessages]:
-    // The callback function passed to setDisplayText receives the previous state (prevMessages).
-    //It creates a new array where the new message (newMessage) is added at the beginning of the list,
-    //followed by the previous messages.
-    //...spreadOperator(used for copying and merging of arrays and objects)
-    //Arrays: Unpacks or spreads elements of an array into another array.
-    //Objects: Unpacks or spreads properties of an object into another object.
-    //...prevMessages: The spread operator takes all elements of the
-    //prevMessages array and expands them into individual elements within the new array.
 
-    //setDisplayText(prevMessages => [newMessage, ...prevMessages]);
-
-    //this line clears the input field
-    // setMyMessage('');
-    //console.log('message==>>', myMessage);
-
-    //Purpose: This line ensures that the FlatList component scrolls to the top to show the most recent message.
-    //scrollTooffset is a method provided by flatlist component
-    //offset:0 means scrolling to the top while animated:true means scroll action will be animated
-    //Use Case: This is often used to ensure that the latest message or item in the list is visible when a new item is added
     flatListRef.current?.scrollToOffset({offset: 0, animated: true});
   };
 
@@ -344,11 +350,11 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
       if (snapshot?.exists()) {
         messagekey1 = chatRoomRef1?.push();
         messagekey1.set(newMessage).then(() => {});
-        console.log(messagekey1, 'key1');
+        //  console.log(messagekey1, 'key1');
       } else {
         messagekey2 = chatRoomRef2?.push();
         messagekey2.set(newMessage).then(() => {});
-        console.log(messagekey2, 'key2');
+        // console.log(messagekey2, 'key2');
       }
     });
   };
@@ -368,7 +374,8 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
 
           const updatedMessage = {
             ...messageData,
-            timeStamp: moment(new Date()).format('hh:mm A'),
+            //  timeStamp: firebase.database.ServerValue.TIMESTAMP,
+            // timeDay: moment(new Date()).format('MMM D, YYYY'),
           };
 
           dispatch(updateMessage(updatedMessage));
@@ -391,7 +398,8 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
 
           const updatedMessage = {
             ...messageSnapshot.val(),
-            timeStamp: moment(new Date()).format('hh:mm A'),
+            //  timeStamp: firebase.database.ServerValue.TIMESTAMP,
+            // timeDay: moment(new Date()).format('MMM D, YYYY'),
           };
 
           dispatch(updateMessage(updatedMessage));
@@ -412,7 +420,8 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
   const onMessageChanged = (snapshot: any) => {
     const updatedMessage = {
       ...snapshot.val(),
-      timeStamp: moment(new Date()).format('hh:mm A'),
+      // timeStamp: firebase.database.ServerValue.TIMESTAMP,
+      // timeDay: moment(new Date()).format('MMM D, YYYY'),
     };
 
     dispatch(updateMessage(updatedMessage));
@@ -446,7 +455,8 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
     }
   }, [isFocused, dispatch, userRef1, userRef2]);
 
-  const renderItem = ({item}: {item: IMessage}) => {
+  const renderItem = ({item, index}: {item: IMessage; index: number}) => {
+    //console.log(JSON.stringify(item, null, 2));
     const isSender = item.senderUid === currentUserUId;
 
     let statusIcon;
@@ -472,42 +482,135 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
         />
       );
     }
+
     return (
-      <View
-        key={item.id}
-        style={[
-          styles.messageContainer,
-          isSender ? styles.senderMessage : styles.receiverMessage,
-        ]}>
-        <Text style={[isSender ? styles.sendMessage : styles.receiveMessage]}>
-          {item.text}
-        </Text>
+      <>
         <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-          }}>
-          {item.timeStamp != 'false' && (
-            <Text style={[isSender ? styles.sendTime : styles.receiveTime]}>
-              {item.timeStamp}
+          key={item.id}
+          style={[
+            styles.messageContainer,
+            isSender ? styles.senderMessage : styles.receiverMessage,
+            // {marginTop: index === allMessages.length - 1 ? 40 : 0},
+          ]}>
+          {item.msgType === 'text' && (
+            <Text
+              style={[isSender ? styles.sendMessage : styles.receiveMessage]}>
+              {item.text}
             </Text>
           )}
-          <View
-            style={{
-              width: 20,
-              height: 20,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-            {isSender && statusIcon}
+
+          {item.msgType === 'photo' && (
+            <ChatImage item={item} isSender={isSender} chatId={chatId} />
+          )}
+
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            {item.timeStamp !== 'false' && (
+              <Text style={[isSender ? styles.sendTime : styles.receiveTime]}>
+                {moment(item.timeStamp)?.format('hh:mm A')}
+              </Text>
+            )}
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+              {isSender && statusIcon}
+            </View>
           </View>
         </View>
-      </View>
+        {viewableDate(item, index) && (
+          <View
+            style={{
+              backgroundColor: 'lightgrey',
+              padding: 10,
+              alignSelf: 'center',
+              marginVertical: 10,
+              borderRadius: 8,
+            }}>
+            <Text
+              style={{
+                fontWeight: 'bold',
+              }}>
+              {viewableDate(item, index)}
+            </Text>
+          </View>
+        )}
+      </>
     );
   };
 
+  const onViewableItemsChanged = ({viewableItems}: {viewableItems: any[]}) => {
+    if (viewableItems.length === 0) return;
+
+    const firstVisibleMessage = viewableItems[viewableItems.length - 1];
+
+    const firstVisibleDate = moment(firstVisibleMessage.item.timeStamp);
+
+    let currentSection: string | null = null;
+
+    if (moment().isSame(firstVisibleDate, 'day')) {
+      currentSection = 'Today';
+    } else if (moment().subtract(1, 'days').isSame(firstVisibleDate, 'day')) {
+      currentSection = 'Yesterday';
+    } else if (moment().subtract(6, 'days').isBefore(firstVisibleDate)) {
+      currentSection = firstVisibleDate.format('dddd');
+    } else {
+      currentSection = firstVisibleDate.format('ddd, MMM D, YYYY');
+    }
+    setVisibleHeader(currentSection);
+    setTimeout(() => {
+      setVisibleHeader(null);
+    }, 2000);
+  };
+
+  const viewableDate = (item: IMessage, index: number) => {
+    const momentDateFirst = moment(
+      allMessages[allMessages.length - 1]?.timeStamp,
+    );
+    const momentDate1 = moment(item?.timeStamp);
+
+    let currentSection: string | null = null;
+
+    if (allMessages.length - 1 === index) {
+      if (moment().isSame(momentDateFirst, 'day')) {
+        return 'Today';
+      } else if (moment().subtract(1, 'days').isSame(momentDateFirst, 'day')) {
+        return 'Yesterday';
+      }
+      if (moment().diff(momentDateFirst, 'days') < 6) {
+        return momentDateFirst.format('dddd');
+      } else {
+        return momentDateFirst.format('ddd, MMM D, YYYY');
+      }
+    }
+    if (
+      allMessages[index + 1]?.timeStamp &&
+      moment(item.timeStamp).format('MMM D, YYYY') !=
+        moment(allMessages[index + 1]?.timeStamp).format('MMM D, YYYY')
+    ) {
+      if (moment().isSame(momentDate1, 'day')) {
+        currentSection = 'Today';
+      } else if (moment().subtract(1, 'days').isSame(momentDate1, 'day')) {
+        currentSection = 'Yesterday';
+      } else if (moment().subtract(6, 'days').isBefore(momentDate1)) {
+        currentSection = momentDate1.format('dddd');
+      } else {
+        currentSection = momentDate1.format('ddd, MMM D, YYYY');
+      }
+
+      return `${currentSection}`;
+    } else {
+      return null;
+    }
+  };
+
   return (
-    <KeyboardAvoidingView style={styles.container} behavior="padding">
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}>
       <View style={styles.headerContainer}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -528,13 +631,38 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
         </View>
       </View>
 
+      {visibleHeader && (
+        <View
+          style={{
+            backgroundColor: 'lightgrey',
+            padding: 10,
+            alignSelf: 'center',
+            marginTop: 20,
+            borderRadius: 8,
+            position: 'absolute',
+            top: 60,
+            zIndex: 100,
+          }}>
+          <Text
+            style={{
+              fontWeight: 'bold',
+            }}>
+            {visibleHeader}
+          </Text>
+        </View>
+      )}
+
       <FlatList<any>
-        ref={flatListRef}
-        data={_.uniqBy(allMessages, 'id')}
         renderItem={renderItem}
-        keyExtractor={item => item.id ?? ''}
+        keyExtractor={item => item.id}
+        ref={flatListRef}
+        data={uniqBy(allMessages, 'id')}
         inverted
         contentContainerStyle={styles.messagesContainer}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{
+          viewAreaCoveragePercentThreshold: 100,
+        }}
       />
 
       <Formik
@@ -555,6 +683,35 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
                 onBlur={handleBlur('message')}
                 multiline={true}
               />
+
+              <ChatImagePicker currentChatId={chatId} handleSend={handleSend} />
+
+              {/* <TouchableOpacity>
+                <MaterialCommunityIcons
+                  name="paperclip"
+                  color={'black'}
+                  size={30}
+                  style={{marginRight: 10}}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity>
+                <MaterialIcons
+                  name="insert-photo"
+                  color={'black'}
+                  size={30}
+                  style={{marginRight: 10}}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity>
+                <MaterialCommunityIcons
+                  name="camera-image"
+                  color={'black'}
+                  size={30}
+                  style={{marginRight: 20}}
+                />
+              </TouchableOpacity> */}
             </View>
             <TouchableOpacity
               disabled={!isMessageSent}
@@ -572,6 +729,7 @@ const Chatscreen: React.FC<IProps> = memo(({route, navigation}: IProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+
     backgroundColor: '#f9f9f9',
   },
   headerContainer: {

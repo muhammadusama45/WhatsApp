@@ -26,10 +26,12 @@ import {
 } from '../../../redux/slice/main/counter-slice/counter-slice';
 import {RootState} from '../../../redux/store';
 import auth from '@react-native-firebase/auth';
-import {Logout} from '../../../redux/slice/auth/auth-slice';
-import ImagePicker from '../../../components/image-picker/image-picker';
+import {clearState, Logout} from '../../../redux/slice/auth/auth-slice';
+import ImagePicker from '../../../components/profile-image-picker/profile-image-picker';
 import {updateName} from '../../../redux/slice/auth/auth-slice';
 import {goBack, navigate} from '../../../../root-navigation';
+import {setLocalImage} from '../../../redux/slice/auth/inbox-slice';
+import RNFS from 'react-native-fs';
 
 interface IProps {
   navigation?: any;
@@ -118,6 +120,18 @@ const ProfileScreen = memo(({navigation, route}: IProps) => {
     try {
       const response = await auth().signOut();
       dispatch(Logout({}));
+      dispatch(setLocalImage(undefined));
+      dispatch(clearState(undefined));
+
+      RNFS.unlink(RNFS.DocumentDirectoryPath)
+        .then(async () => {
+          console.log('FILE DELETED');
+        })
+        // `unlink` will throw an error, if the item to unlink does not exist
+        .catch(err => {
+          console.log(err.message);
+        });
+
       console.log('User signed out!');
       navigation.navigate('Login');
     } catch (error) {

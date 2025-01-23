@@ -3,6 +3,7 @@ import {handleLogin} from './action/login';
 import {SignUp} from './action/signup';
 import {forgetPassword} from './action/forgot-password';
 import {AuthState} from '../../states';
+import {stat} from 'react-native-fs';
 
 const initialState: AuthState = {
   isAuth: false,
@@ -13,6 +14,7 @@ const initialState: AuthState = {
   name: '',
   surname: '',
   gender: '',
+  profileImage: '',
 };
 
 export const authSlice = createSlice({
@@ -23,9 +25,24 @@ export const authSlice = createSlice({
       state.isAuth = false;
       state.uid = '';
       state.email = '';
+      state.loading = false;
     },
+    clearState: (state, action) => {
+      state.loading = false;
+      state.email = '';
+      state.profileImage = '';
+      state.uid = '';
+      state.name = '';
+      state.surname = '';
+      state.gender = '';
+      state.profileImage = '';
+    },
+
     updateName(state, action) {
       state.name = action.payload;
+    },
+    updateProfileImage(state, action) {
+      state.profileImage = action.payload;
     },
 
     // setVisibleData: (state, action) => {
@@ -94,6 +111,7 @@ export const authSlice = createSlice({
     });
   },
 });
-export const {Logout, updateName} = authSlice.actions;
+export const {Logout, updateName, updateProfileImage, clearState} =
+  authSlice.actions;
 
 export default authSlice.reducer;

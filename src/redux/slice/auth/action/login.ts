@@ -3,6 +3,7 @@ import {createAsyncThunk} from '@reduxjs/toolkit';
 import {Alert} from 'react-native';
 import {LoginPayload} from '../../../../types/payload-types';
 import database from '@react-native-firebase/database';
+import RNFS from 'react-native-fs';
 
 interface LoginResponse {
   userCredential: FirebaseAuthTypes.UserCredential;
@@ -27,6 +28,7 @@ export const handleLogin = createAsyncThunk<LoginResponse, LoginPayload>(
       if (userData) {
         const {name, uid} = userData;
         console.log('User data fetched:', userData);
+        await RNFS.mkdir(RNFS.DocumentDirectoryPath);
 
         return {userCredential: response, name, uid};
       } else {

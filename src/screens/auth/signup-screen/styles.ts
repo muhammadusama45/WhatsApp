@@ -22,22 +22,8 @@ export const stylesSignup = StyleSheet.create({
     marginEnd: 10,
   },
   signupbtn: {
-    fontSize: 25,
+    fontSize: 18,
     color: 'white',
-    backgroundColor: 'green',
     fontWeight: 'bold',
-    margin: 10,
-    padding: 10,
-    height: 60,
-    width: 220,
-
-    elevation: 5,
-    borderRadius: 10,
-    shadowOpacity: 1,
-    shadowColor: 'black',
-    borderWidth: 1.5,
-    borderColor: 'black',
-    textAlignVertical: 'center',
-    textAlign: 'center',
   },
 });

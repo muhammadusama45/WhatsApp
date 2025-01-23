@@ -2,7 +2,7 @@ import database, {FirebaseDatabaseTypes} from '@react-native-firebase/database';
 import _ from 'lodash';
 import moment from 'moment';
 import React, {memo, useEffect, useState} from 'react';
-import {FlatList, Image, Text, TouchableOpacity, View} from 'react-native';
+import {FlatList, Text, TouchableOpacity, View} from 'react-native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import {useDispatch, useSelector} from 'react-redux';
 import {navigate} from '../../../../root-navigation';
@@ -16,6 +16,7 @@ import {
   setVisibleData,
 } from '../../../redux/slice/auth/inbox-slice';
 import {RootState} from '../../../redux/store';
+import InboxImage from './inbox-image';
 import {styles} from './styles';
 
 interface ChatMessage {
@@ -70,6 +71,7 @@ const InboxScreen = memo(({}: IProps) => {
   const {uid, name} = useSelector((state: RootState) => state.auth);
   const {visibleData} = useSelector((state: RootState) => state.inbox);
   const [longPressedItemId, setLongPressedItemId] = useState<ChatItem>();
+  const [localImagePath, setLocalImagePath] = useState<string | null>(null);
   const currentUserUid = uid;
   const dispatch = useDispatch();
 
@@ -111,13 +113,21 @@ const InboxScreen = memo(({}: IProps) => {
   };
 
   const inboxObject = (childSnapshot: FirebaseDatabaseTypes.DataSnapshot) => {
+    const lastMsgTime = childSnapshot.child('lastmsgtime').val();
+    const msgMoment = moment(lastMsgTime);
+    const now = moment();
+    const isToday = now.isSame(msgMoment, 'day');
+    const isYesterday = now.diff(msgMoment, 'days') === 1;
     return {
       id: childSnapshot.key ?? '',
       name: childSnapshot.child('chatName').val(),
       lastMsg: childSnapshot.child('lastmsg').val(),
-      lastTime: moment(childSnapshot.child('lastmsgtime').val()).format(
-        'hh:mm A',
-      ),
+
+      lastTime: isToday
+        ? `Today ${msgMoment.format('hh:mm A')}`
+        : isYesterday
+        ? `Yesterday ${msgMoment.format('hh:mm A')}`
+        : msgMoment.format('MMM D, YYYY'),
       secondUser: childSnapshot.child('secondUser').val(),
       image: childSnapshot.child('image').val(),
       chatVisible: childSnapshot.child('chatVisible').val(),
@@ -173,6 +183,7 @@ const InboxScreen = memo(({}: IProps) => {
 
   const renderItem = ({item}: {item: ChatItem}) => {
     const recipientUid = item.secondUser;
+    const isCurrentUser = recipientUid === currentUserUid;
 
     const onLong = () => {
       console.log(item);
@@ -190,7 +201,7 @@ const InboxScreen = memo(({}: IProps) => {
           dispatch(clearChat([]));
 
           navigate('Chat', {
-            chatName: item.name,
+            chatName: isCurrentUser ? `${item.name} (You)` : item.name,
             imageIcon: item.image,
             currentUserUId: currentUserUid,
             recipientUid: recipientUid,
@@ -199,19 +210,24 @@ const InboxScreen = memo(({}: IProps) => {
           });
         }}>
         <View style={{width: 48, height: 48, borderRadius: 24, zIndex: 500}}>
-          <Image
+          {/* <Image
             source={
               item.image
                 ? {uri: item.image}
                 : require('../../../assets/list-images/man1.png')
             }
             style={{width: 48, height: 48, borderRadius: 24}}
-          />
+          /> */}
+          <>
+            <InboxImage item={item} />
+          </>
         </View>
 
         <View style={{flex: 1, zIndex: 500}}>
           <View style={styles.row}>
-            <Text style={styles.nameText}>{item.name}</Text>
+            <Text style={styles.nameText} numberOfLines={1}>
+              {isCurrentUser ? `${item.name} (You)` : item.name}
+            </Text>
             {item.lastTime != 'Invalid date' && item.lastMsg != '' && (
               <Text style={styles.timeText}>{item.lastTime}</Text>
             )}
@@ -353,6 +369,7 @@ const InboxScreen = memo(({}: IProps) => {
         keyExtractor={item => item.id ?? ''}
         onEndReached={loadMoreChats}
         onEndReachedThreshold={0.5}
+        ListFooterComponent={<View style={{height: 65}} />}
       />
 
       <TouchableOpacity
